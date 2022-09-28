@@ -8,24 +8,28 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import com.google.android.gms.auth.api.Auth
 import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessOptions
 import com.google.android.gms.fitness.data.DataSet
 import com.google.android.gms.fitness.data.DataType
+import com.google.android.gms.fitness.request.DataReadRequest
+import com.google.android.gms.fitness.result.DataReadResponse
 import io.ballerine.kmp.googlefitnesstracker.screens.HomeScreen
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.GoogleFitnessTrackerTheme
-import java.text.DateFormat
+import io.ballerine.kmp.googlefitnesstracker.utils.showToast
+import java.text.SimpleDateFormat
+import java.util.*
 import java.util.concurrent.TimeUnit
 
 
 class MainActivity : ComponentActivity() {
 
-    private val GOOGLE_FIT_PERMISSIONS_REQUEST_CODE = 1001
+    private val googleFitRequestCode = 1001
+
+    private var stepsMutableState = mutableStateOf("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +40,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    HomeScreen(onGoogleSignInClick = {
+                    HomeScreen(stepsMutableState = stepsMutableState, onGoogleSignInClick = {
                         setUpGoogleSignIn()
                     })
                 }
@@ -49,8 +53,8 @@ class MainActivity : ComponentActivity() {
     private fun setUpGoogleSignIn() {
 
         val fitnessOptions = FitnessOptions.builder()
-            .addDataType(DataType.TYPE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_WRITE)
-            .addDataType(DataType.AGGREGATE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_WRITE)
+            .addDataType(DataType.TYPE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_READ)
+            .addDataType(DataType.AGGREGATE_STEP_COUNT_DELTA, FitnessOptions.ACCESS_READ)
             .build()
 
         if (!GoogleSignIn.hasPermissions(
@@ -60,7 +64,7 @@ class MainActivity : ComponentActivity() {
         ) {
             GoogleSignIn.requestPermissions(
                 this, // your activity instance
-                GOOGLE_FIT_PERMISSIONS_REQUEST_CODE,
+                googleFitRequestCode,
                 GoogleSignIn.getLastSignedInAccount(this),
                 fitnessOptions
             )
@@ -71,50 +75,62 @@ class MainActivity : ComponentActivity() {
 
     private fun displayStepDataForToday() {
 
-        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestEmail()
-            .build()
-
-        val mGoogleApiClient = GoogleApiClient.Builder(this)
-            .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
-            .build()
-
-        val result =
-            Fitness.HistoryApi.readDailyTotal(mGoogleApiClient, DataType.TYPE_STEP_COUNT_DELTA)
-                .await(1, TimeUnit.MINUTES)
-
-        result.total?.let { showDataSet(it) }
+        val readRequest = queryFitnessData()
+        GoogleSignIn.getLastSignedInAccount(this)?.let {
+            Fitness.getHistoryClient(this, it)
+                .readData(readRequest)
+                .addOnSuccessListener { dataReadResponse ->
+                    printData(dataReadResponse)
+                }
+                .addOnFailureListener { e ->
+                    showToast("There was a problem reading the data. $e")
+                    Log.e("tag", "There was a problem reading the data.", e)
+                }
+        }
     }
 
-    private fun showDataSet(dataSet: DataSet) {
-        val dateFormat: DateFormat = DateFormat.getDateInstance()
-        val timeFormat: DateFormat = DateFormat.getTimeInstance()
+
+    private fun queryFitnessData(): DataReadRequest {
+        val calEndTime = Calendar.getInstance()
+        val calendar = Calendar.getInstance()
+        val formatDateTime = "yyyy-MM-dd"
+        val sdf = SimpleDateFormat(formatDateTime, Locale.getDefault())
+        sdf.timeZone = TimeZone.getTimeZone("GMT")
+        calendar.add(Calendar.DAY_OF_YEAR, -7)
+        calendar[Calendar.HOUR_OF_DAY] = 0
+        calendar[Calendar.MINUTE] = 0
+        calendar[Calendar.MILLISECOND] = 0
+        calendar[Calendar.SECOND] = 0
+
+        return DataReadRequest.Builder()
+            .aggregate(DataType.TYPE_STEP_COUNT_DELTA, DataType.AGGREGATE_STEP_COUNT_DELTA)
+            .bucketByTime(1, TimeUnit.HOURS)
+            .setTimeRange(calendar.timeInMillis, calEndTime.timeInMillis, TimeUnit.MILLISECONDS)
+            .build()
+    }
+
+    private fun printData(dataReadResult: DataReadResponse) {
+        if (dataReadResult.buckets.size > 0) {
+            for (bucket in dataReadResult.buckets) {
+                val dataSets = bucket.dataSets
+                for (dataSet in dataSets) {
+                    dumpDataSet(dataSet)
+                }
+            }
+        } else if (dataReadResult.dataSets.size > 0) {
+            for (dataSet in dataReadResult.dataSets) {
+                dumpDataSet(dataSet)
+            }
+        }
+    }
+
+    private fun dumpDataSet(dataSet: DataSet) {
+        if (dataSet.dataPoints.size == 0) {
+            stepsMutableState.value = "0"
+        }
         for (dp in dataSet.dataPoints) {
-            Log.d("History", "Data point:")
-            Log.d("History", "\tType: " + dp.dataType.name)
-            Log.d(
-                "History",
-                "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS))
-                    .toString() + " " + timeFormat.format(
-                    dp.getStartTime(
-                        TimeUnit.MILLISECONDS
-                    )
-                )
-            )
-            Log.d(
-                "History",
-                "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS))
-                    .toString() + " " + timeFormat.format(
-                    dp.getStartTime(
-                        TimeUnit.MILLISECONDS
-                    )
-                )
-            )
             for (field in dp.dataType.fields) {
-                Log.d(
-                    "History", "\tField: " + field.name +
-                            " Value: " + dp.getValue(field)
-                )
+                stepsMutableState.value = dp.getValue(field).toString()
             }
         }
     }
@@ -123,12 +139,15 @@ class MainActivity : ComponentActivity() {
         super.onActivityResult(requestCode, resultCode, data)
 
         if (resultCode == RESULT_OK) {
-            if (requestCode == GOOGLE_FIT_PERMISSIONS_REQUEST_CODE) {
+            if (requestCode == googleFitRequestCode) {
                 displayStepDataForToday()
+            } else {
+                Log.e("onActivityResult", "Failed")
+                showToast("Failed!")
             }
-        }
-        else{
-
+        } else {
+            Log.e("onActivityResult", "Failed")
+            showToast("Failed!")
         }
     }
 }
