@@ -17,14 +17,18 @@ import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessOptions
 import com.google.android.gms.fitness.data.DataSet
 import com.google.android.gms.fitness.data.DataType
+import com.google.android.gms.fitness.data.Field
 import com.google.android.gms.fitness.request.DataReadRequest
 import com.google.android.gms.fitness.result.DataReadResponse
 import io.ballerine.kmp.googlefitnesstracker.screens.GoogleSignInScreen
 import io.ballerine.kmp.googlefitnesstracker.screens.HomeScreen
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.GoogleFitnessTrackerTheme
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.STATUS_BAR_COLOR
+import io.ballerine.kmp.googlefitnesstracker.utils.Constant.AVERAGE
 import io.ballerine.kmp.googlefitnesstracker.utils.SignOutDialog
 import io.ballerine.kmp.googlefitnesstracker.utils.showToast
+import java.text.DateFormat
+import java.text.DateFormat.getTimeInstance
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -35,6 +39,8 @@ class MainActivity : ComponentActivity() {
     private val googleFitRequestCode = 1001
 
     private var stepsMutableState = mutableStateOf("")
+    private var speedOfASessionMutableState = mutableStateOf("0")
+    private var distanceOfASessionMutableState = mutableStateOf("0")
 
     private var isGoogleSignInProgress = mutableStateOf(false)
 
@@ -48,10 +54,7 @@ class MainActivity : ComponentActivity() {
 
             val systemUiController = rememberSystemUiController()
 
-            systemUiController.setSystemBarsColor(
-                color = STATUS_BAR_COLOR
-            )
-
+            systemUiController.setSystemBarsColor(color = STATUS_BAR_COLOR)
 
             GoogleFitnessTrackerTheme {
                 // A surface container using the 'background' color from the theme
@@ -68,11 +71,13 @@ class MainActivity : ComponentActivity() {
                                 setUpGoogleSignIn()
                             })
                     } else {
-                        HomeScreen(stepsMutableState = stepsMutableState, onGoogleSignOutClick = {
-                            /*onGoogleSignOut()*/
-
-                            isShowSignOutDialog.value = true
-                        })
+                        HomeScreen(
+                            stepsMutableState = stepsMutableState,
+                            speedOfASessionMutableState = speedOfASessionMutableState,
+                            distanceOfASessionMutableState = distanceOfASessionMutableState,
+                            onGoogleSignOutClick = {
+                                isShowSignOutDialog.value = true
+                            })
                     }
 
                     if (isShowSignOutDialog.value) {
@@ -89,15 +94,7 @@ class MainActivity : ComponentActivity() {
 
         setUpGoogleSignIn()
     }
-
-    private fun onGoogleSignOut() {
-        GoogleSignIn.getClient(applicationContext, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
-            .addOnSuccessListener {
-                isGoogleSignedIn.value = false
-            }
-    }
-
-    val isGoogleSignedIn = mutableStateOf(false)
+    private val isGoogleSignedIn = mutableStateOf(false)
     private fun setUpGoogleSignIn() {
 
         val fitnessOptions = FitnessOptions.builder()
@@ -126,25 +123,136 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun onGoogleSignOut() {
+        GoogleSignIn.getClient(applicationContext, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
+            .addOnSuccessListener {
+                isGoogleSignedIn.value = false
+            }
+    }
+
+
     private fun displayStepDataForToday() {
 
-        val readRequest = queryFitnessData()
+        /*  val readRequest = queryFitnessData()
+          GoogleSignIn.getLastSignedInAccount(this)?.let {
+
+              Log.d("getLastSignedInAccount", "${it.displayName} ${it.email} ${it.photoUrl}")
+
+              Fitness.getHistoryClient(this, it)
+                  .readData(readRequest)
+                  .addOnSuccessListener { dataReadResponse ->
+                      printData(dataReadResponse)
+                  }
+                  .addOnFailureListener { e ->
+                      showToast("There was a problem reading the data. $e")
+                      Log.e("tag", "There was a problem reading the data.", e)
+                  }
+          }*/
+
+
         GoogleSignIn.getLastSignedInAccount(this)?.let {
 
-            Log.d("getLastSignedInAccount", "${it.displayName} ${it.email} ${it.photoUrl}")
+            val historyClient = Fitness.getHistoryClient(this, it)
 
-            Fitness.getHistoryClient(this, it)
-                .readData(readRequest)
-                .addOnSuccessListener { dataReadResponse ->
-                    printData(dataReadResponse)
+            //Total steps in a day
+            historyClient
+                .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA)
+                .addOnSuccessListener { result ->
+                    stepsMutableState.value =
+                        (result.dataPoints.firstOrNull()?.getValue(Field.FIELD_STEPS)?.asInt()
+                            ?: 0).toString()
+                    // Do something with totalSteps
                 }
                 .addOnFailureListener { e ->
                     showToast("There was a problem reading the data. $e")
                     Log.e("tag", "There was a problem reading the data.", e)
                 }
+
+            //Average daily speed
+            historyClient
+                .readDailyTotal(DataType.TYPE_SPEED)
+                .addOnSuccessListener { result ->
+                    dumpDataSetForSpeed(result)
+                }
+                .addOnFailureListener { e ->
+                    showToast("There was a problem reading the data. $e")
+                    Log.e("tag", "There was a problem reading the data.", e)
+                }
+
+            //Total distance in a day
+            historyClient
+                .readDailyTotal(DataType.TYPE_DISTANCE_DELTA)
+                .addOnSuccessListener { result ->
+                    dumpDataSetForDistance(result)
+                }
+                .addOnFailureListener { e ->
+                    showToast("There was a problem reading the data. $e")
+                    Log.e("tag", "There was a problem reading the data.", e)
+                }
+
+            /*Fitness.getHistoryClient(this, it)
+                .readData(readRequestSpeed)
+                .addOnSuccessListener { dataReadResponse ->
+                    printSpeedData(dataReadResponse)
+                }
+                .addOnFailureListener { e ->
+                    showToast("There was a problem reading the data. $e")
+                    Log.e("tag", "There was a problem reading the data.", e)
+                }*/
         }
     }
 
+    private fun dumpDataSetForSpeed(dataSet: DataSet) {
+        Log.d("dumpDataSetForSpeed", "Data returned for Data type: " + dataSet.dataType.name)
+        for (dp in dataSet.dataPoints) {
+            val dateFormat: DateFormat = getTimeInstance()
+            Log.d("dumpDataSetForSpeed", "Data point:")
+            Log.d("dumpDataSetForSpeed", "\tType: " + dp.dataType.name)
+            Log.d(
+                "dumpDataSetForSpeed",
+                "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS))
+            )
+            Log.d(
+                "dumpDataSetForSpeed",
+                "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS))
+            )
+            for (field in dp.dataType.fields) {
+                Log.d(
+                    "dumpDataSetForSpeed", "\tField: " + field.name +
+                            " Value: " + dp.getValue(field)
+                )
+
+                if (field.name == AVERAGE) {
+                    speedOfASessionMutableState.value = dp.getValue(field).toString()
+                }
+            }
+        }
+    }
+
+    private fun dumpDataSetForDistance(dataSet: DataSet) {
+        Log.d("dumpDataSetForDistance", "Data returned for Data type: " + dataSet.dataType.name)
+        for (dp in dataSet.dataPoints) {
+            val dateFormat: DateFormat = getTimeInstance()
+            Log.d("dumpDataSetForDistance", "Data point:")
+            Log.d("dumpDataSetForDistance", "\tType: " + dp.dataType.name)
+            Log.d(
+                "dumpDataSetForDistance",
+                "\tStart: " + dateFormat.format(dp.getStartTime(TimeUnit.MILLISECONDS))
+            )
+            Log.d(
+                "dumpDataSetForDistance",
+                "\tEnd: " + dateFormat.format(dp.getEndTime(TimeUnit.MILLISECONDS))
+            )
+            for (field in dp.dataType.fields) {
+                Log.d(
+                    "dumpDataSetForDistance", "\tField: " + field.name +
+                            " Value: " + dp.getValue(field)
+                )
+
+                distanceOfASessionMutableState.value = dp.getValue(field).toString()
+            }
+        }
+    }
 
     private fun queryFitnessData(): DataReadRequest {
         val calEndTime = Calendar.getInstance()
@@ -186,6 +294,7 @@ class MainActivity : ComponentActivity() {
         }
         for (dp in dataSet.dataPoints) {
             for (field in dp.dataType.fields) {
+
                 stepsMutableState.value = dp.getValue(field).toString()
             }
         }

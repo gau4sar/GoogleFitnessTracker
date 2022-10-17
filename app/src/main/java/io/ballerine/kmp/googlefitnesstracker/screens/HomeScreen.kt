@@ -26,7 +26,12 @@ import io.ballerine.kmp.googlefitnesstracker.ui.theme.STROKE_BACKGROUND_COLOR
 import io.ballerine.kmp.googlefitnesstracker.utils.*
 
 @Composable
-fun HomeScreen(onGoogleSignOutClick: () -> Unit, stepsMutableState: MutableState<String>) {
+fun HomeScreen(
+    onGoogleSignOutClick: () -> Unit,
+    stepsMutableState: MutableState<String>,
+    speedOfASessionMutableState: MutableState<String>,
+    distanceOfASessionMutableState: MutableState<String>
+) {
 
 
     // get local density from composable
@@ -156,12 +161,9 @@ fun HomeScreen(onGoogleSignOutClick: () -> Unit, stepsMutableState: MutableState
 
                 MediumPrimaryTextStyle(text = "Calories")
 
-
                 BigWhiteTextStyle(
-                    text = (String.format(
-                        "%.1f",
-                        stepsMutableState.value.toFloat() * 0.04
-                    ))
+                    text = (stepsMutableState.value.toFloat() * 0.04
+                            ).formatTo1Decimal()
                 )
 
                 MediumPrimaryTextStyle(text = "Kcal")
@@ -177,7 +179,9 @@ fun HomeScreen(onGoogleSignOutClick: () -> Unit, stepsMutableState: MutableState
 
                 MediumPrimaryTextStyle(text = "Speed Avg.")
 
-                BigWhiteTextStyle(text = "3")
+                BigWhiteTextStyle(
+                    text = (speedOfASessionMutableState.value.toFloat() * 3.6).formatTo1Decimal()
+                )
 
                 MediumPrimaryTextStyle(text = "Km/h")
             }
@@ -192,7 +196,9 @@ fun HomeScreen(onGoogleSignOutClick: () -> Unit, stepsMutableState: MutableState
 
                 MediumPrimaryTextStyle(text = "Distance")
 
-                BigWhiteTextStyle(text = "7")
+                BigWhiteTextStyle(
+                    text = (distanceOfASessionMutableState.value.toFloat() * 0.001).formatTo1Decimal()
+                )
 
                 MediumPrimaryTextStyle(text = "Km")
             }
