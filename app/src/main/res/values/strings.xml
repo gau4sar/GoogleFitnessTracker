@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">GoogleFitnessTracker</string>
+    <string name="welcome">Welcome to Fitness Tracker</string>
+    <string name="track_your_steps">Track your every steps</string>
+    <string name="sign_in_google">Sign in with Google</string>
 </resources>

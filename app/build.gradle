@@ -63,4 +63,13 @@ dependencies {
 
     implementation("com.google.android.gms:play-services-fitness:21.1.0")
     implementation("com.google.android.gms:play-services-auth:20.3.0")
+    //Constraint layout
+    implementation "androidx.constraintlayout:constraintlayout-compose:1.0.0"
+    implementation "com.google.accompanist:accompanist-systemuicontroller:0.17.0"
+
+    implementation "io.coil-kt:coil-compose:2.1.0"
+    implementation "io.coil-kt:coil-gif:2.1.0"
+
+    implementation "com.airbnb.android:lottie-compose:5.2.0"
+
 }

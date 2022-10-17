@@ -10,15 +10,20 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessOptions
 import com.google.android.gms.fitness.data.DataSet
 import com.google.android.gms.fitness.data.DataType
 import com.google.android.gms.fitness.request.DataReadRequest
 import com.google.android.gms.fitness.result.DataReadResponse
+import io.ballerine.kmp.googlefitnesstracker.screens.GoogleSignInScreen
 import io.ballerine.kmp.googlefitnesstracker.screens.HomeScreen
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.GoogleFitnessTrackerTheme
+import io.ballerine.kmp.googlefitnesstracker.ui.theme.STATUS_BAR_COLOR
+import io.ballerine.kmp.googlefitnesstracker.utils.SignOutDialog
 import io.ballerine.kmp.googlefitnesstracker.utils.showToast
 import java.text.SimpleDateFormat
 import java.util.*
@@ -31,18 +36,53 @@ class MainActivity : ComponentActivity() {
 
     private var stepsMutableState = mutableStateOf("")
 
+    private var isGoogleSignInProgress = mutableStateOf(false)
+
+    private var isShowSignOutDialog = mutableStateOf(false)
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
+
+            val systemUiController = rememberSystemUiController()
+
+            systemUiController.setSystemBarsColor(
+                color = STATUS_BAR_COLOR
+            )
+
+
             GoogleFitnessTrackerTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    HomeScreen(stepsMutableState = stepsMutableState, onGoogleSignInClick = {
-                        setUpGoogleSignIn()
-                    })
+
+                    if (!isGoogleSignedIn.value) {
+                        GoogleSignInScreen(
+                            isGoogleSignInProgress = isGoogleSignInProgress,
+                            onGoogleSignInClick = {
+                                isGoogleSignInProgress.value = true
+                                setUpGoogleSignIn()
+                            })
+                    } else {
+                        HomeScreen(stepsMutableState = stepsMutableState, onGoogleSignOutClick = {
+                            /*onGoogleSignOut()*/
+
+                            isShowSignOutDialog.value = true
+                        })
+                    }
+
+                    if (isShowSignOutDialog.value) {
+                        SignOutDialog(onCancel = {
+                            isShowSignOutDialog.value = false
+                        }) {
+                            isShowSignOutDialog.value = false
+                            onGoogleSignOut()
+                        }
+                    }
                 }
             }
         }
@@ -50,6 +90,14 @@ class MainActivity : ComponentActivity() {
         setUpGoogleSignIn()
     }
 
+    private fun onGoogleSignOut() {
+        GoogleSignIn.getClient(applicationContext, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
+            .addOnSuccessListener {
+                isGoogleSignedIn.value = false
+            }
+    }
+
+    val isGoogleSignedIn = mutableStateOf(false)
     private fun setUpGoogleSignIn() {
 
         val fitnessOptions = FitnessOptions.builder()
@@ -62,6 +110,7 @@ class MainActivity : ComponentActivity() {
                 fitnessOptions
             )
         ) {
+            isGoogleSignedIn.value = false
             GoogleSignIn.requestPermissions(
                 this, // your activity instance
                 googleFitRequestCode,
@@ -69,6 +118,8 @@ class MainActivity : ComponentActivity() {
                 fitnessOptions
             )
         } else {
+            isGoogleSignInProgress.value = false
+            isGoogleSignedIn.value = true
             displayStepDataForToday()
         }
     }
@@ -77,6 +128,9 @@ class MainActivity : ComponentActivity() {
 
         val readRequest = queryFitnessData()
         GoogleSignIn.getLastSignedInAccount(this)?.let {
+
+            Log.d("getLastSignedInAccount", "${it.displayName} ${it.email} ${it.photoUrl}")
+
             Fitness.getHistoryClient(this, it)
                 .readData(readRequest)
                 .addOnSuccessListener { dataReadResponse ->
@@ -140,14 +194,17 @@ class MainActivity : ComponentActivity() {
 
         if (resultCode == RESULT_OK) {
             if (requestCode == googleFitRequestCode) {
+                isGoogleSignedIn.value = true
                 displayStepDataForToday()
             } else {
                 Log.e("onActivityResult", "Failed")
                 showToast("Failed!")
             }
+            isGoogleSignInProgress.value = false
         } else {
             Log.e("onActivityResult", "Failed")
             showToast("Failed!")
+            isGoogleSignInProgress.value = false
         }
     }
 }
