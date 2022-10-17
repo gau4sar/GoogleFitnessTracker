@@ -106,8 +106,11 @@ fun HomeScreen(onGoogleSignOutClick: () -> Unit, stepsMutableState: MutableState
             /*.background(Color.Cyan)*/,
             contentAlignment = Alignment.Center
         ) {
+            if (stepsMutableState.value.isEmpty()) {
+                stepsMutableState.value = "0"
+            }
             ComposeCircularProgressBar(
-                percentage = 0.4f,
+                percentage = stepsMutableState.value.toFloat() / 5000,
                 fillColor = Color.White,
                 backgroundColor = STROKE_BACKGROUND_COLOR,
                 strokeWidth = 14.dp
@@ -130,7 +133,7 @@ fun HomeScreen(onGoogleSignOutClick: () -> Unit, stepsMutableState: MutableState
 
                 Spacer16Dp()
 
-                BigWhiteTextStyle("${/*stepsMutableState.value + */200}")
+                BigWhiteTextStyle(stepsMutableState.value)
             }
         }
 
@@ -153,7 +156,13 @@ fun HomeScreen(onGoogleSignOutClick: () -> Unit, stepsMutableState: MutableState
 
                 MediumPrimaryTextStyle(text = "Calories")
 
-                BigWhiteTextStyle(text = "700")
+
+                BigWhiteTextStyle(
+                    text = (String.format(
+                        "%.1f",
+                        stepsMutableState.value.toFloat() * 0.04
+                    ))
+                )
 
                 MediumPrimaryTextStyle(text = "Kcal")
             }
