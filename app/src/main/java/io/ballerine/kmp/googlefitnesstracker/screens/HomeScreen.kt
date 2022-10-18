@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,9 +20,8 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.Dimension
 import io.ballerine.kmp.googlefitnesstracker.R
-import io.ballerine.kmp.googlefitnesstracker.data.DailySteps
-import io.ballerine.kmp.googlefitnesstracker.ui.theme.GRADIENT_2
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.ColorPrimary
+import io.ballerine.kmp.googlefitnesstracker.ui.theme.GRADIENT_2
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.LIGHT_PRIMARY_TEXT_COLOR
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.STROKE_BACKGROUND_COLOR
 import io.ballerine.kmp.googlefitnesstracker.utils.*
@@ -105,6 +103,7 @@ fun HomeScreen(
             })
         }
 
+        //Progress bar for steps
         Box(
             modifier = Modifier
                 .layoutId(progressLayoutId)
@@ -141,6 +140,7 @@ fun HomeScreen(
             }
         }
 
+        //Calories - Speed - Distance
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -203,6 +203,7 @@ fun HomeScreen(
             }
         }
 
+        //Graph
         Column(
             modifier = Modifier
                 .layoutId(graphLayoutId)
@@ -211,7 +212,6 @@ fun HomeScreen(
                 .background(Color.White)
                 .padding(20.dp)
         ) {
-
             Chart(data = sharedViewModel.dailySteps, max_value = 10000,stepsMutableState=sharedViewModel.stepsMutableState)
         }
     }

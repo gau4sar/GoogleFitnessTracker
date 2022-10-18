@@ -28,7 +28,6 @@ class SharedViewModel : ViewModel() {
     var isShowSignOutDialog = mutableStateOf(false)
 
     var dailySteps = mutableStateListOf<DailySteps>()
-
     var errorMessages = mutableStateListOf<String>()
 
     fun readRequests(historyClient: HistoryClient) {
@@ -87,11 +86,13 @@ class SharedViewModel : ViewModel() {
             .setStreamName("estimated_steps")
             .setAppPackageName("com.google.android.gms")
             .build()
+
         val readRequest: DataReadRequest = DataReadRequest.Builder()
             .aggregate(estimatedStepsDelta, DataType.AGGREGATE_STEP_COUNT_DELTA)
             .bucketByTime(1, TimeUnit.DAYS)
             .setTimeRange(startTime, endTime, TimeUnit.MILLISECONDS)
             .build()
+
         historyClient
             .readData(readRequest)
             .addOnSuccessListener { dataReadResponse ->
@@ -155,7 +156,7 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-    private fun queryFitnessData(): DataReadRequest {
+    /*private fun queryFitnessData(): DataReadRequest {
         val calEndTime = Calendar.getInstance()
         val calendar = Calendar.getInstance()
         val formatDateTime = "yyyy-MM-dd"
@@ -172,7 +173,7 @@ class SharedViewModel : ViewModel() {
             .bucketByTime(1, TimeUnit.HOURS)
             .setTimeRange(calendar.timeInMillis, calEndTime.timeInMillis, TimeUnit.MILLISECONDS)
             .build()
-    }
+    }*/
 
     private fun printData(dataReadResult: DataReadResponse) {
         if (dataReadResult.buckets.size > 0) {
@@ -189,7 +190,6 @@ class SharedViewModel : ViewModel() {
         }
     }
 
-
     private fun dumpDataSetForWeeklySteps(dataSet: DataSet) {
         for (dp in dataSet.dataPoints) {
             val dateFormat: DateFormat = DateFormat.getTimeInstance()
@@ -197,7 +197,7 @@ class SharedViewModel : ViewModel() {
             Log.d("dumpDataSetForDailySteps", "\tType: " + dp.dataType.name)
 
             val formatter = SimpleDateFormat("EE", Locale.getDefault())
-            val day = formatter.format(Date(dp.getTimestamp(TimeUnit.MILLISECONDS)));
+            val day = formatter.format(Date(dp.getTimestamp(TimeUnit.MILLISECONDS)))
 
             dailySteps.add(DailySteps(day, 0f))
 
