@@ -3,4 +3,11 @@
     <string name="welcome">Welcome to Fitness Tracker</string>
     <string name="track_your_steps">Track your every steps</string>
     <string name="sign_in_google">Sign in with Google</string>
+    <string name="distance">Distance</string>
+    <string name="km">Km</string>
+    <string name="km_h">Km/h</string>
+    <string name="speed_avg">Speed Avg.</string>
+    <string name="kcal">Kcal</string>
+    <string name="calories">Calories</string>
+    <string name="today">Today</string>
 </resources>

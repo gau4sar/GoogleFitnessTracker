@@ -1,11 +1,13 @@
 package io.ballerine.kmp.googlefitnesstracker.utils
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -31,7 +33,9 @@ fun SignOutDialog(onCancel: () -> Unit, onSignOut: () -> Unit) {
                 shape = RoundedCornerShape(12.dp)
             ) {
 
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier
+                    .background(Color.White)
+                    .padding(16.dp)) {
 
                     NormalBlackTextStyle18sp(
                         text = "Sign Out"
@@ -54,6 +58,47 @@ fun SignOutDialog(onCancel: () -> Unit, onSignOut: () -> Unit) {
                             onClick = { onSignOut() },
                             textColor = NEGATIVE_BUTTON_COLOR
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+//Layout
+@Composable
+fun ErrorMessageDialog(text: String, onDismiss: () -> Unit) {
+    val openDialog = remember { mutableStateOf(true) }
+
+    if (openDialog.value) {
+        Dialog(onDismissRequest = { onDismiss() }) {
+
+            Card(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(12.dp)
+            ) {
+
+                Column(
+                    modifier = Modifier
+                        .background(Color.White)
+                        .padding(16.dp)
+                ) {
+
+                    NormalBlackTextStyle18sp(
+                        text = text
+                    )
+
+                    Spacer16Dp()
+
+                    // Buttons
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+
+                        NormalTextButton(
+                            text = "Ok",
+                            onClick = { onDismiss() })
                     }
                 }
             }

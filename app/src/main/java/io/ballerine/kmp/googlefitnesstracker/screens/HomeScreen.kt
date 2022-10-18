@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Icon
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -14,27 +15,27 @@ import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.Dimension
 import io.ballerine.kmp.googlefitnesstracker.R
+import io.ballerine.kmp.googlefitnesstracker.data.DailySteps
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.GRADIENT_2
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.ColorPrimary
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.LIGHT_PRIMARY_TEXT_COLOR
 import io.ballerine.kmp.googlefitnesstracker.ui.theme.STROKE_BACKGROUND_COLOR
 import io.ballerine.kmp.googlefitnesstracker.utils.*
+import io.ballerine.kmp.googlefitnesstracker.viewmodel.SharedViewModel
 
 @Composable
 fun HomeScreen(
     onGoogleSignOutClick: () -> Unit,
-    stepsMutableState: MutableState<String>,
-    speedOfASessionMutableState: MutableState<String>,
-    distanceOfASessionMutableState: MutableState<String>
+    sharedViewModel: SharedViewModel
 ) {
 
 
-    // get local density from composable
     val localDensity = LocalDensity.current
     var descriptionHeight by remember {
         mutableStateOf(0.dp)
@@ -111,11 +112,9 @@ fun HomeScreen(
             /*.background(Color.Cyan)*/,
             contentAlignment = Alignment.Center
         ) {
-            if (stepsMutableState.value.isEmpty()) {
-                stepsMutableState.value = "0"
-            }
+
             ComposeCircularProgressBar(
-                percentage = stepsMutableState.value.toFloat() / 5000,
+                percentage = sharedViewModel.stepsMutableState.value.toFloat() / 5000,
                 fillColor = Color.White,
                 backgroundColor = STROKE_BACKGROUND_COLOR,
                 strokeWidth = 14.dp
@@ -138,7 +137,7 @@ fun HomeScreen(
 
                 Spacer16Dp()
 
-                BigWhiteTextStyle(stepsMutableState.value)
+                BigWhiteTextStyle(sharedViewModel.stepsMutableState.value)
             }
         }
 
@@ -159,14 +158,14 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                MediumPrimaryTextStyle(text = "Calories")
+                MediumPrimaryTextStyle(text = stringResource(R.string.calories))
 
                 BigWhiteTextStyle(
-                    text = (stepsMutableState.value.toFloat() * 0.04
+                    text = (sharedViewModel.stepsMutableState.value.toFloat() * 0.04
                             ).formatTo1Decimal()
                 )
 
-                MediumPrimaryTextStyle(text = "Kcal")
+                MediumPrimaryTextStyle(text = stringResource(R.string.kcal))
             }
 
             SpacerLightPrimaryDp(descriptionHeight)
@@ -177,13 +176,13 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                MediumPrimaryTextStyle(text = "Speed Avg.")
+                MediumPrimaryTextStyle(text = stringResource(R.string.speed_avg))
 
                 BigWhiteTextStyle(
-                    text = (speedOfASessionMutableState.value.toFloat() * 3.6).formatTo1Decimal()
+                    text = (sharedViewModel.speedOfASessionMutableState.value.toFloat() * 3.6).formatTo1Decimal()
                 )
 
-                MediumPrimaryTextStyle(text = "Km/h")
+                MediumPrimaryTextStyle(text = stringResource(R.string.km_h))
             }
 
             SpacerLightPrimaryDp(descriptionHeight)
@@ -194,13 +193,13 @@ fun HomeScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                MediumPrimaryTextStyle(text = "Distance")
+                MediumPrimaryTextStyle(text = stringResource(R.string.distance))
 
                 BigWhiteTextStyle(
-                    text = (distanceOfASessionMutableState.value.toFloat() * 0.001).formatTo1Decimal()
+                    text = (sharedViewModel.distanceOfASessionMutableState.value.toFloat() * 0.001).formatTo1Decimal()
                 )
 
-                MediumPrimaryTextStyle(text = "Km")
+                MediumPrimaryTextStyle(text = stringResource(R.string.km))
             }
         }
 
@@ -213,18 +212,7 @@ fun HomeScreen(
                 .padding(20.dp)
         ) {
 
-            val map: List<ValuePair> = listOf(
-                ValuePair(0.10f, "11/2"),
-                ValuePair(0.3f, "12/2"),
-                ValuePair(0.4f, "13/2"),
-                ValuePair(0.5f, "14/2"),
-                ValuePair(0.90f, "15/2"),
-                ValuePair(0.7f, "Today")
-            )
-
-            Chart(data = map, max_value = 10000)
+            Chart(data = sharedViewModel.dailySteps, max_value = 10000,stepsMutableState=sharedViewModel.stepsMutableState)
         }
     }
 }
-
-data class ValuePair(val steps: Float, val date: String)

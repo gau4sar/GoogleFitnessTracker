@@ -62,20 +62,8 @@ fun GoogleSignInScreen(
 
         Spacer32Dp()
 
-
-        /*if (isGoogleSignInProgress.value) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-            }
-        } else {*/
         GoogleSignInButton(isGoogleSignInProgress.value) {
             onGoogleSignInClick()
         }
-
     }
-
 }
